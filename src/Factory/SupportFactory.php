@@ -6,7 +6,7 @@
 	 * Time: 13.32
 	 */
 
-	namespace Kosmosx\Support;
+	namespace Kosmosx\Support\Factory;
 
 	use Kosmosx\Support\Status\StatusService;
 	use Kosmosx\Support\Api\ApiService;
