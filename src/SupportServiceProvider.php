@@ -2,9 +2,9 @@
 
 	namespace Kosmosx\Support;
 
-	use Kosmosx\Core\Providers\BaseServiceProvider;
+	use Illuminate\Support\ServiceProvider;
 
-	class SupportServiceProvider extends BaseServiceProvider
+	class SupportServiceProvider extends ServiceProvider
 	{
 		/**
 		 * Register any application services.
@@ -13,12 +13,12 @@
 		 */
 		public function register()
 		{
-			$this->registerAlias(array(
-				'ApiService' => \Kosmosx\Support\Api\ApiFacade::class,
-				'StatusService' => \Kosmosx\Support\Status\StatusFacade::class,
-			));
+			class_alias(\Kosmosx\Support\SupportFacade::class, 'SupportFactory');
+			class_alias(\Kosmosx\Support\Api\ApiFacade::class, 'ApiService');
+			class_alias(\Kosmosx\Support\Status\StatusFacade::class, 'StatusService');
 
+			$this->app->singleton('factory.support', 'Kosmosx\Support\SupportFactory');
 			$this->app->singleton('service.api', 'Kosmosx\Support\Api\ApiService');
-			$this->app->singleton('service.status', 'Kosmosx\Support\Status\StatusService');
+			$this->app->bind('service.status', 'Kosmosx\Support\Status\StatusService');
 		}
 	}

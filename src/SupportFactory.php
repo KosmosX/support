@@ -9,8 +9,9 @@
 	namespace Kosmosx\Support;
 
 	use Kosmosx\Support\Status\StatusService;
+	use Kosmosx\Support\Api\ApiService;
 
-	class Service
+	class SupportFactory implements SupportFactoryInteface
 	{
 		/**
 		 *    Helper function to wrap ServiceStatus return.
@@ -25,7 +26,7 @@
 		 * @return StatusService
 		 */
 		public function fail(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
-			return new StatusService(FALSE, $statusCode, $data, $message);
+			return new StatusService(false, $statusCode, $data, $message);
 		}
 
 		/**
@@ -40,6 +41,13 @@
 		 * @return ServiceStatus
 		 */
 		public function success(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
-			return new StatusService(TRUE, $statusCode, $data, $message);
+			return new StatusService(true, $statusCode, $data, $message);
+		}
+
+		/**
+		 * @return ApiService
+		 */
+		public function api(): ApiService {
+			return new ApiService();
 		}
 	}
