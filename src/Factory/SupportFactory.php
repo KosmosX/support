@@ -25,8 +25,8 @@
 		 *
 		 * @return StatusService
 		 */
-		public function fail(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
-			return new StatusService(false, $statusCode, $data, $message);
+		public static function fail(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
+			return StatusService::set(false, $statusCode, $data, $message);
 		}
 
 		/**
@@ -40,8 +40,8 @@
 		 *
 		 * @return ServiceStatus
 		 */
-		public function success(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
-			return new StatusService(true, $statusCode, $data, $message);
+		public static function success(?int $statusCode = null, array $data = array(), string $message = null): StatusService {
+			return StatusService::set(true, $statusCode, $data, $message);
 		}
 
 		/**
