@@ -27,6 +27,6 @@
 			$this->app->bind('service.api', 'Kosmosx\Support\Api\ApiService');
 			$this->app->bind('service.status', 'Kosmosx\Support\Status\StatusService');
 
-			$this->commands(\Kosmosx\Cache\Console\Commands\PublishConfig::class);
+			$this->commands(\Kosmosx\Support\Console\Commands\PublishConfig::class);
 		}
 	}
