@@ -8,8 +8,8 @@
 	class ApiService
 	{
 		use Fractal;
-
 		static $discovery = array();
+		static $orphan_routes = array();
 
 		/**
 		 * @param string $get_version
@@ -17,28 +17,62 @@
 		 * @return array
 		 * @throws \ReflectionException
 		 */
-		public static function apiDiscovery(string $get_version = ''): array
+		public static function apiDiscovery(?string $get_version = null, bool $whitOrphans = false): array
 		{
 			$discovery_api = config('discovery.resources') ?: null;
-			$resources_path = config('discovery.resources_path') ?: null;
+			$discovery_path = config('discovery.path') ?: null;
 			$registered_routes = \Route::getRoutes();
 
-			if ($get_version) {
+			if (null == $get_version) {
 				$discovery_api = Arr::only($discovery_api, $get_version);
 			}
 
-			if (null == $discovery_api || null == $resources_path || null == $registered_routes) {
+			if (null == $discovery_api || null == $registered_routes) {
 				return array();
 			}
 
 			foreach ($discovery_api as $version => $resources) {
-				foreach ($resources as $controller_name => $endpoint) {
-					$controller = $resources_path . '\\' . $version . '\\' . $controller_name;
-					self::$discovery[$controller_name] = self::_autoDiscovery($registered_routes, $controller, $endpoint);
+				foreach ($resources as $resource => $config) {
+					if (!self::_isValidResources($config, $discovery_path))
+						break;
+
+					$resource_namespace = $config['path'] . '\\' . $version . '\\' . $resource;
+					if (class_exists($resource_namespace)) {
+						self::$discovery[$resource] = self::_autoDiscovery($registered_routes, $resource_namespace, $config['endpoint']);
+					}
 				}
 			}
 
-			return self::$discovery;
+			$discovered = array('discovered' => self::$discovery);
+			if ($whitOrphans)
+				return array_merge($discovered, ['orphans' => self::$orphan_routes]);
+			else
+				return $discovered;
+		}
+
+		private static function _isValidResources(&$config, ?string $discovery_path = null): bool
+		{
+			if (is_array($config)) {
+				if (!array_key_exists('endpoint', $config)) {
+					return false;
+				}
+
+				if (!array_key_exists('path', $config)) {
+					if (null == $discovery_path || !is_string($discovery_path))
+						return false;
+					else
+						$config['path'] = $discovery_path;
+				}
+
+				return true;
+			}
+
+			if (is_string($resource_data)) {
+				$config['endpoint'] = $config;
+				return true;
+			}
+
+			return false;
 		}
 
 		/**
@@ -48,11 +82,12 @@
 		 * @return array|null
 		 * @throws \ReflectionException
 		 */
-		private static function _autoDiscovery(array &$registered_routes, string $controller, $endpoint): ?array
+		private static function _autoDiscovery(array &$registered_routes, string $resource, $endpoint): ?array
 		{
-			$controller_routes = self::_detectRoutesController($registered_routes, $controller, $endpoint);
+			$detected_routes = self::_detectRoutesController($registered_routes, $resource, $endpoint);
 
-			$discovered = self::_detectControllerMethods($controller, $controller_routes);
+			$discovered = array();
+			self::_detectControllerMethods($discovered, $resource, $detected_routes);
 
 			return $discovered;
 		}
@@ -90,7 +125,7 @@
 			return $detect_routes;
 		}
 
-		private static function _detectControllerMethods(array &$discovered, string $controller, array $controller_routes): void
+		private static function _detectControllerMethods(array &$discovered, string $controller, array $detected_routes): void
 		{
 			if (isset($controller::$PARAMETERS) && is_array($controller::$PARAMETERS) && !empty($controller::$PARAMETERS))
 				$controller_params = $controller::$PARAMETERS;
@@ -104,15 +139,18 @@
 					break;
 
 				//Check if method is registered in routes and is equal with controller method
-				if (in_array($method->name, array_keys($controller_routes))) {
-					$discovered[$method->name] = $controller_routes[$method->name];
+				if (in_array($method->name, array_keys($detected_routes))) {
+					$discovered[$method->name] = $detected_routes[$method->name];
 
-					//Gets the method's parameters
+					//Gets the api's parameters from controller
 					if ($controller_params && array_key_exists($method->name, $controller_params))
 						$discovered[$method->name]['parameters'] = $controller_params[$method->name];
 
-					unset($controller_routes[$method->name], $item);
+					unset($detected_routes[$method->name], $item);
 				}
 			}
+
+			if (!empty($detected_routes))
+				self::$orphan_routes[] = $detected_routes;
 		}
 	}

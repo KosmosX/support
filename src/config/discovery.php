@@ -1,11 +1,14 @@
 <?php
 
 	return [
-		'resources_path' => 'App\Http\Controller',
+		'path' => 'App\Http\Controller',
 		'resources' => [
 			'v1' => [
-				// Example:
-				//'AppController' => 'api/v1/app'
+				//'ExampleController' => [
+				//	'endpoint' => 'api/v1/test',
+				//	'path' => 'App\Http\Controller\v1',
+				//],
+				//'ExampleController2' => 'api/auth',
 			]
 		],
 	];
