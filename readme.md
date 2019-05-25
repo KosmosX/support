@@ -9,6 +9,8 @@
 
     /Kosmosx/Support/SupportServiceProvider::class
 
+    php artisan kosmosx:publish:support
+    
 **Use it**
 
     $support = app('factory.support');
@@ -30,3 +32,8 @@
     
     $api = $support->api()
     $api->collection($data, $transformer, $includesData = null, $serializer = null) //Create collection with data Transformer
+    
+**Route API auto discovery**
+    
+    \ApiService::apiDiscovery();
+    

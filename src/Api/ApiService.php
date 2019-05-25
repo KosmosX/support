@@ -19,7 +19,7 @@
 		 */
 		public static function apiDiscovery(string $get_version = ''): array
 		{
-			$discovery_api = config('discovery.api') ?: null;
+			$discovery_api = config('discovery.resources') ?: null;
 			$resources_path = config('discovery.resources_path') ?: null;
 			$registered_routes = \Route::getRoutes();
 
@@ -32,9 +32,9 @@
 			}
 
 			foreach ($discovery_api as $version => $resources) {
-				foreach ($resources as $controller_name => $data) {
+				foreach ($resources as $controller_name => $endpoint) {
 					$controller = $resources_path . '\\' . $version . '\\' . $controller_name;
-					self::$discovery[$controller_name] = self::_autoDiscovery($registered_routes, $controller, $data);
+					self::$discovery[$controller_name] = self::_autoDiscovery($registered_routes, $controller, $endpoint);
 				}
 			}
 
@@ -48,16 +48,13 @@
 		 * @return array|null
 		 * @throws \ReflectionException
 		 */
-		private static function _autoDiscovery(array &$registered_routes, string $controller, $data): ?array
+		private static function _autoDiscovery(array &$registered_routes, string $controller, $endpoint): ?array
 		{
-			if (is_string($data))
-				$data = array('endpoint' => $data);
+			$controller_routes = self::_detectRoutesController($registered_routes, $controller, $endpoint);
 
-			$controller_routes = self::_detectRoutesController($registered_routes, $controller, $data['endpoint']);
+			$discovered = self::_detectControllerMethods($controller, $controller_routes);
 
-			$filtered = self::_detectControllerMethods($controller, $controller_routes);
-
-			return $filtered;
+			return $discovered;
 		}
 
 		private static function _detectRoutesController(array &$registered_routes, string $controller, string $endpoint): array
@@ -93,9 +90,8 @@
 			return $detect_routes;
 		}
 
-		private static function _detectControllerMethods(string $controller, array $controller_routes): ?array
+		private static function _detectControllerMethods(array &$discovered, string $controller, array $controller_routes): void
 		{
-			$filtered = array();
 			if (isset($controller::$PARAMETERS) && is_array($controller::$PARAMETERS) && !empty($controller::$PARAMETERS))
 				$controller_params = $controller::$PARAMETERS;
 			else
@@ -109,15 +105,14 @@
 
 				//Check if method is registered in routes and is equal with controller method
 				if (in_array($method->name, array_keys($controller_routes))) {
-					$filtered[$method->name] = $controller_routes[$method->name];
+					$discovered[$method->name] = $controller_routes[$method->name];
 
 					//Gets the method's parameters
 					if ($controller_params && array_key_exists($method->name, $controller_params))
-						$filtered[$method->name]['parameters'] = $controller_params[$method->name];
+						$discovered[$method->name]['parameters'] = $controller_params[$method->name];
 
 					unset($controller_routes[$method->name], $item);
 				}
 			}
-			return $filtered;
 		}
 	}
