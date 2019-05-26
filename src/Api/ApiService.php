@@ -67,8 +67,12 @@
 				return true;
 			}
 
-			if (is_string($resource_data)) {
-				$config['endpoint'] = $config;
+			if (is_string($config)) {
+				if (null == $discovery_path || !is_string($discovery_path))
+					return false;
+				else
+					$config = array('endpoint'=>$config, 'path' => $discovery_path);
+
 				return true;
 			}
 
