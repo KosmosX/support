@@ -13,12 +13,6 @@
 		 */
 		public function register()
 		{
-			try {
-				$this->app->configure('discovery');
-			} catch (\Exception $e) {
-
-			}
-
 			class_alias(\Kosmosx\Support\Factory\SupportFacade::class, 'SupportFactory');
 			class_alias(\Kosmosx\Support\Api\ApiFacade::class, 'ApiService');
 			class_alias(\Kosmosx\Support\Status\StatusFacade::class, 'StatusService');
@@ -26,7 +20,5 @@
 			$this->app->singleton('factory.support', 'Kosmosx\Support\Factory\SupportFactory');
 			$this->app->bind('service.api', 'Kosmosx\Support\Api\ApiService');
 			$this->app->bind('service.status', 'Kosmosx\Support\Status\StatusService');
-
-			$this->commands(\Kosmosx\Support\Console\Commands\PublishConfig::class);
 		}
 	}
