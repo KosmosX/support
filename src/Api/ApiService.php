@@ -37,13 +37,13 @@
 					$resource_name = substr($namespace, strrpos($namespace, '\\') + 1);
 
 					if (!class_exists($namespace))
-						break;
+						continue;
+
+					if (self::_disableResource($resource_name, $disable))
+						continue;
 
 					if (null != $endpoint && false === strpos($route['uri'], $endpoint))
-						break;
-
-					if (!self::_disableResource($resource_name, $disable))
-						break;
+						continue;
 
 					$reflaction_obj = new \ReflectionClass($namespace);
 
@@ -67,8 +67,7 @@
 					if (self::_isRegistrable($method, $reflaction_obj)) {
 						if (isset($namespace::$PARAMETERS) && is_array($namespace::$PARAMETERS) && array_key_exists($method, $namespace::$PARAMETERS))
 							$resource['parameters'] = $namespace::$PARAMETERS[$method];
-
-						if(null != $endpoint)
+						if (null != $endpoint)
 							self::$discovery[$endpoint][$resource_name][$method] = $resource;
 						else
 							self::$discovery[$reflaction_obj->getNamespaceName()][$resource_name][$method] = $resource;
@@ -80,13 +79,11 @@
 
 		private static function _disableResource(string $resource, array $disable = array()): bool
 		{
-			if (!empty($disable)) {
-				foreach ($disable as $key => $exclude) {
-					if ($resource === $exclude)
-						return false;
-				}
-			}
-			return true;
+			foreach ($disable as $key => $exclude)
+				if ($resource === $exclude)
+					return true;
+
+			return false;
 		}
 
 		private static function _isRegistrable(string $method, $reflaction_obj): bool
