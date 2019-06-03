@@ -8,20 +8,20 @@
 
 	namespace Kosmosx\Support\Api\Traits;
 
+	use League\Fractal\TransformerAbstract;
 	use League\Fractal\Pagination\IlluminatePaginatorAdapter;
 	use League\Fractal\Resource\Item;
 	use League\Fractal\Resource\Collection;
 	use League\Fractal\Manager;
+	use League\Fractal\Serializer\ArraySerializer;
 
 	trait Fractal
 	{
-
-
 		private $fractal;
 
 		public function __construct()
 		{
-			$this->fractal = app(Manager::class);
+			$this->fractal = new Manager();
 		}
 
 		/**
@@ -33,7 +33,7 @@
 		 * @param null $serializer (class of Serialize)
 		 * @return mixed
 		 */
-		public function collection($data, $transformer, $includesData = null, $serializer = null)
+		public function collection($data, TransformerAbstract $transformer, ?array $includesData = null, ArraySerializer $serializer = null)
 		{
 			$resource = new Collection($data, $transformer);
 			return $this->transform($resource, $serializer, $includesData);
@@ -46,7 +46,7 @@
 		 * @param null $serializer (class of Serialize)
 		 * @return mixed
 		 */
-		public function paginate($data, $transformer, $includesData = null, $serializer = null)
+		public function paginate($data,TransformerAbstract $transformer, ?array  $includesData = null, ArraySerializer $serializer = null)
 		{
 			$resource = new Collection($data->getCollection(), $transformer);
 			$resource->setPaginator(new IlluminatePaginatorAdapter($data));
@@ -60,7 +60,7 @@
 		 * @param null $serializer (class of Serialize)
 		 * @return mixed
 		 */
-		public function item($data, $transformer, $includesData = null, $serializer = null)
+		public function item($data,TransformerAbstract $transformer, ?array  $includesData = null, ArraySerializer $serializer = null)
 		{
 			$resource = new Item($data, $transformer);
 			return $this->transform($resource, $serializer, $includesData);
@@ -70,7 +70,7 @@
 		 * @param $serializer
 		 * @return $this
 		 */
-		public function serializer($serializer){
+		public function serializer(ArraySerializer $serializer){
 			$this->fractal->setSerializer($serializer);
 			return $this;
 		}
@@ -79,7 +79,7 @@
 		 * @param $includes
 		 * @return $this
 		 */
-		public function includes($includes){
+		public function includes(array $includes){
 			$this->fractal->parseIncludes($includes);
 			return $this;
 		}
@@ -88,7 +88,7 @@
 		 * @param $excludes
 		 * @return $this
 		 */
-		public function excludes($excludes){
+		public function excludes(array $excludes){
 			$this->fractal->parseExcludes($excludes);
 			return $this;
 		}
@@ -108,7 +108,7 @@
 		 * @param $includesData
 		 * @return mixed
 		 */
-		private function transform($data, $serializer, $includesData){
+		private function transform($data, ?ArraySerializer $serializer, ?array $includesData){
 			if($serializer)
 				$this->serializer($serializer);
 			if($includesData)

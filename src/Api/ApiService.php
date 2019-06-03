@@ -3,103 +3,105 @@
 	namespace Kosmosx\Support\Api;
 
 	use Kosmosx\Support\Api\Traits\Fractal;
+	use Kosmosx\Helpers\Status\StatusService;
 	use Illuminate\Support\Arr;
+	use Illuminate\Http\Request;
 
-	class ApiService
+	class ApiService extends StatusService
 	{
 		use Fractal;
 
-		static $discovery = array();
-
 		/**
-		 * @param string $get_version
+		 * @param \Illuminate\Http\Request $request
+		 * @param null|array|string        $get
 		 *
 		 * @return array
-		 * @throws \ReflectionException
 		 */
-		public static function discovery(?string $endpoint = null, array $disable = array()): array
-		{
-			self::$discovery = array();
+		public function query(Request $request, $get = null):array {
+			if(null == $get || empty($get))
+				return  $request->all();
 
-			$routes = \Route::getRoutes();
+			$params = array();
 
-			self::_autoDiscovery($routes, $endpoint, $disable);
+			if(is_string($get))
+				$get = (array) $get;
 
-			return self::$discovery;
+			foreach ($get as $item)
+				if(is_string($item) && $value = $request->get($item, null))
+					$params[$item] = $value;
+
+			return $params;
 		}
 
-		private static function _autoDiscovery(array &$routes, ?string $endpoint = null, array $disable): void
-		{
-			foreach ($routes as $key => $route) {
-				if (array_key_exists('uses', $route['action'])) {
-					$namespace = substr($route['action']['uses'], 0, strpos($route['action']['uses'], '@'));
+		/**
+		 * @param \Illuminate\Http\Request $request
+		 * @param bool                     $onlyKeys
+		 *
+		 * @return array
+		 */
+		public function getInclude(Request $request, bool $onlyKeys = false): array {
+			$query = $this->query($request, 'include');
 
-					$resource_name = substr($namespace, strrpos($namespace, '\\') + 1);
+			if (array_key_exists('include',$query))
+				return $onlyKeys ? array_keys($query['include']) : $query['include'];
 
-					if (!class_exists($namespace))
-						continue;
+			return array();
+		}
 
-					if (self::_disableResource($resource_name, $disable))
-						continue;
+		/**
+		 * @param \Illuminate\Http\Request $request
+		 * @param bool                     $onlyKeys
+		 *
+		 * @return array
+		 */
+		public function getQuery(Request $request, bool $onlyKeys = false): array {
+			$query = $this->query($request, 'query');
 
-					if (null != $endpoint && false === strpos($route['uri'], $endpoint))
-						continue;
+			if (array_key_exists('query',$query))
+				return $onlyKeys ? array_keys($query['query']) : $query['query'];
 
-					$reflaction_obj = new \ReflectionClass($namespace);
+			return array();
+		}
 
-					//Get method's name
-					$method = substr($route['action']['uses'], strpos($route['action']['uses'], '@') + 1);
+		/**
+		 * JSON:API standard v1.1
+		 *
+		 * @param array $resource
+		 * @param array $includes
+		 *
+		 * @return array
+		 */
+		public function manipulateResource(array $resource, array $includes = array()) {
+			$manipulate = array();
 
-					//Create resource array
-					$resource = array(
-						'http' => $route['method'],
-						'endpoint' => $route['uri'],
-						'middleware' => array_key_exists('middleware', $route['action']) ? $route['action']['middleware'] : null,
-						'controller' => array(
-							'namespace' => $namespace,
-							'extend' => $reflaction_obj->getParentClass(),
-							'implements' => $reflaction_obj->getInterfaces(),
-							'name' => $resource_name,
-							'method' => $method,
-						),
-					);
+			if ($data = Arr::only($resource, ['type', 'id', 'attributes', 'relationships', 'links']))
+				$manipulate['data'] = $data;
 
-					if (self::_isRegistrable($method, $reflaction_obj)) {
-						if (isset($namespace::$PARAMETERS) && is_array($namespace::$PARAMETERS) && array_key_exists($method, $namespace::$PARAMETERS))
-							$resource['parameters'] = $namespace::$PARAMETERS[$method];
-						if (null != $endpoint)
-							self::$discovery[$endpoint][$resource_name][$method] = $resource;
-						else
-							self::$discovery[$reflaction_obj->getNamespaceName()][$resource_name][$method] = $resource;
-					}
-				}
-				unset($routes[$key]);
+			if ($included = Arr::only($resource, $includes))
+				$manipulate['included'] = $included;
+
+			return $manipulate;
+		}
+
+		/**
+		 * JSON:API standard v1.1
+		 *
+		 * @param array $resources
+		 * @param array $includes
+		 *
+		 * @return array
+		 */
+		public function manipulateResources(array $resources, array $includes = array()) {
+			$manipulate = array();
+
+			foreach ($resources as $resource) {
+				if ($data = Arr::only($resource, ['type', 'id', 'attributes', 'relationships', 'links']))
+					$manipulate['data'][] = $data;
+
+				if ($included = Arr::only($resource, $includes))
+					$manipulate['included'][$resource['id']] = $included;
 			}
-		}
 
-		private static function _disableResource(string $resource, array $disable = array()): bool
-		{
-			foreach ($disable as $key => $exclude)
-				if ($resource === $exclude)
-					return true;
-
-			return false;
-		}
-
-		private static function _isRegistrable(string $method, $reflaction_obj): bool
-		{
-			$controller_methods = $reflaction_obj->getMethods(\ReflectionMethod::IS_PUBLIC);
-
-			foreach ($controller_methods as $controller_method) {
-				//Check if the method is of the controller class and not of the parents
-				if ($controller_method->class !== $reflaction_obj->getName())
-					break;
-
-				//Check if method is registered in routes and is equal with controller method
-				if ($controller_method->name === $method)
-					return true;
-			}
-
-			return false;
+			return $manipulate;
 		}
 	}
